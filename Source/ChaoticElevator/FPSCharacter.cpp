@@ -104,7 +104,7 @@ void AFPSCharacter::Fire()
 
 		// Skew the aim to be slightly upwards.
 		FRotator MuzzleRotation = CameraRotation;
-		MuzzleRotation.Pitch += 10.0f;
+		MuzzleRotation.Pitch += 2.5f;				// not sure about this value as well as about the MuzzleLocation
 
 		UWorld* World = GetWorld();
 		if (World)
