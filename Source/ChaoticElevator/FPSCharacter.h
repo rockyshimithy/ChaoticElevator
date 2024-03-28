@@ -47,7 +47,7 @@ public:
 	UCameraComponent* FPSCameraComponent;
 
 	// First-person mesh (arms), visible only to the owning player.
-	UPROPERTY(VisibleDefaultsOnly, Category = Mesh)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh)
 	USkeletalMeshComponent* FPSMesh;
 
 	// Gun muzzle offset from the camera location.
