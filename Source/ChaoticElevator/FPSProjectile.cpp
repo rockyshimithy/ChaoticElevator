@@ -1,25 +1,17 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 
 #include "FPSProjectile.h"
 
-// Sets default values
 AFPSProjectile::AFPSProjectile()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-    // Use a sphere as a simple collision representation.
     CollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComponent"));
-    // Set the sphere's collision profile name to "Projectile".
     CollisionComponent->BodyInstance.SetCollisionProfileName(TEXT("Projectile"));
-    // Event called when component hits something.
-    CollisionComponent->OnComponentHit.AddDynamic(this, &AFPSProjectile::OnHit);
-    // Set the sphere's collision radius.
     CollisionComponent->InitSphereRadius(1.0f);
-    // Set the root component to be the collision component.
-    RootComponent = CollisionComponent;
 
+    CollisionComponent->OnComponentHit.AddDynamic(this, &AFPSProjectile::OnHit);
+
+    RootComponent = CollisionComponent;
 
     // Use this component to drive this projectile's movement.
     ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
@@ -48,22 +40,17 @@ AFPSProjectile::AFPSProjectile()
         ProjectileMeshComponent->SetupAttachment(RootComponent);
     }
 
-    // Delete the projectile after 3 seconds.
-    InitialLifeSpan = 3.0f;
+    InitialLifeSpan = 3.0f; // Delete the projectile after 3 seconds.
 }
 
-// Called when the game starts or when spawned
 void AFPSProjectile::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
-// Called every frame
 void AFPSProjectile::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 // Function that initializes the projectile's velocity in the shoot direction.

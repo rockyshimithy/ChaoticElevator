@@ -1,62 +1,51 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 
 #include "FPSCharacter.h"
 
-// Sets default values
 AFPSCharacter::AFPSCharacter()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
-
-	// Create a first person camera component.
+	
 	FPSCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
-	check(FPSCameraComponent != nullptr);
-	// Attach the camera component to our capsule component.
+	check(FPSCameraComponent != nullptr); // Do I really need it here?
 	FPSCameraComponent->SetupAttachment(CastChecked<USceneComponent, UCapsuleComponent>(GetCapsuleComponent()));
-	// Position the camera slightly above the eyes.
+	// Position the camera slightly above the eyes. Should we?
 	FPSCameraComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 50.0f + BaseEyeHeight));
-	// Enable the pawn to control camera rotation.
 	FPSCameraComponent->bUsePawnControlRotation = true;
 
-
-	// Create a first person mesh component for the owning player.
 	FPSMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FirstPersonMesh"));
-	check(FPSMesh != nullptr);
-	// Only the owning player sees this mesh.
+	check(FPSMesh != nullptr);  // Do I really need it here?
 	FPSMesh->SetOnlyOwnerSee(true);
-	// Attach the FPS mesh to the FPS camera.
 	FPSMesh->SetupAttachment(FPSCameraComponent);
-	// Disable some environmental shadows to preserve the illusion of having a single mesh.
-	FPSMesh->bCastDynamicShadow = false;
-	FPSMesh->CastShadow = false;
-	// The owning player doesn't see the regular (third-person) body mesh.
+	FPSMesh->bCastDynamicShadow = false; // Disable some environmental shadows to preserve the illusion of having a single mesh.
+	FPSMesh->CastShadow = false; // The owning player doesn't see the regular (third-person) body mesh.
 	GetMesh()->SetOwnerNoSee(true);
 
+	bIsGrabbingObject = false; // What about use PhysicsHandle->GrabbedComponent only?
+
+	PhysicsHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("PhysicsHandle"));
 }
 
-// Called when the game starts or when spawned
 void AFPSCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	check(GEngine != nullptr);
-
-	// Display a debug message for five seconds. 
-	// The -1 "Key" value argument prevents the message from being updated or refreshed.
-	//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("We are using FPSCharacter."));
-
 }
 
-// Called every frame
 void AFPSCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (PhysicsHandle->GrabbedComponent)
+	{
+		FVector CameraLocation;
+		FRotator CameraRotation;
+		GetActorEyesViewPoint(CameraLocation, CameraRotation);
+
+		FVector TraceEnd = CameraLocation + FTransform(CameraRotation).TransformVector(FVector(250.0f, 0.0, 0.0f));
+
+		PhysicsHandle->SetTargetLocation(TraceEnd);
+	}
 }
 
-// Handles input for moving forward and backward.
 void AFPSCharacter::MoveForward(float Value)
 {
 	//AddMovementInput(GetActorForwardVector(), Value);
@@ -66,7 +55,6 @@ void AFPSCharacter::MoveForward(float Value)
 	AddMovementInput(Direction, Value);
 }
 
-// Handles input for moving right and left.
 void AFPSCharacter::MoveRight(float Value)
 {
 	//AddMovementInput(GetActorRightVector(), Value);
@@ -125,22 +113,64 @@ void AFPSCharacter::Fire()
 	//}
 }
 
-// Called to bind functionality to input
+void AFPSCharacter::PickUpObject()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("PickUpObject"));
+	if (!bIsGrabbingObject)
+	{
+		FHitResult Hit;
+
+		FVector CameraLocation;
+		FRotator CameraRotation;
+		GetActorEyesViewPoint(CameraLocation, CameraRotation);
+
+		FVector TraceStart = CameraLocation;
+		FVector TraceEnd = CameraLocation + FTransform(CameraRotation).TransformVector(FVector(250.0f, 0.0, 0.0f));
+
+		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(this);
+
+		GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, TraceChannelProperty, QueryParams);
+
+		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, Hit.bBlockingHit ? FColor::Blue : FColor::Red, false, 5.0f, 0, 2.0f);
+
+		if (Hit.bBlockingHit && IsValid(Hit.GetActor()))
+		{
+			UE_LOG(LogTemp, Log, TEXT("Trace hit actor: %s"), *Hit.GetActor()->GetName());
+
+			UPrimitiveComponent* Component = Hit.GetComponent();
+			PhysicsHandle->GrabComponentAtLocationWithRotation(
+				Component,
+				NAME_None,
+				Component->GetRelativeTransform().GetTranslation(),
+				Component->GetRelativeTransform().GetRotation().Rotator()
+			);
+
+			bIsGrabbingObject = true;
+		}
+
+	}
+	else
+	{
+		PhysicsHandle->ReleaseComponent();
+		bIsGrabbingObject = false;
+	}
+}
+
+
 void AFPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
+	// Review input system...
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	// Set up "movement" bindings.
 	PlayerInputComponent->BindAxis("ForwardAxis", this, &AFPSCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("RightAxis", this, &AFPSCharacter::MoveRight);
 
-	// Set up "look" bindings.
 	PlayerInputComponent->BindAxis("LookUp", this, &AFPSCharacter::LookUp);
 	PlayerInputComponent->BindAxis("Turn", this, &AFPSCharacter::Turn);
 
-	// Set up "action" bindings.
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AFPSCharacter::Fire);
-
+	PlayerInputComponent->BindAction("PickUpObject", IE_Pressed, this, &AFPSCharacter::PickUpObject);
 }
 
