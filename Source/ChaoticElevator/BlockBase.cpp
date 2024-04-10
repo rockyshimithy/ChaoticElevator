@@ -8,8 +8,9 @@ ABlockBase::ABlockBase()
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootSceneComponent"));
 
 	VisualMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("VisualMesh"));
-	VisualMesh->SetupAttachment(RootComponent);
+	VisualMesh->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
 	VisualMesh->SetSimulatePhysics(true);
+	VisualMesh->SetupAttachment(RootComponent);
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh>CubeMesh(TEXT("'/Engine/BasicShapes/Cube.Cube'"));
 	if (CubeMesh.Succeeded())
@@ -21,8 +22,7 @@ ABlockBase::ABlockBase()
 	if (Material.Succeeded())
 	{
 		VisualMesh->SetMaterial(0, Material.Object);
-		VisualMesh->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
-		VisualMesh->SetupAttachment(RootComponent);
+
 	}
 
 	BoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("Box"));

@@ -4,6 +4,8 @@
 
 ABlock::ABlock()
 {
+	VisualMesh->SetRelativeScale3D(FVector(0.5f, 0.5f, 0.5f));
+
 	BoxComponent->OnComponentBeginOverlap.AddDynamic(this, &ABlock::ChangeColor);
 }
 
